@@ -4,6 +4,185 @@
 
 MyTypist Backend uses PostgreSQL (development and production) with advanced optimization configurations for maximum performance. This guide covers database setup, optimization, migration, and maintenance.
 
+## Database Structure
+## Core Database Entities
+
+### User Management
+
+```
+┌─────────────────┐
+│      users      │
+├─────────────────┤
+│ id              │
+│ email           │
+│ password_hash   │
+│ full_name       │
+│ created_at      │
+│ updated_at      │
+│ is_active       │
+│ is_verified     │
+│ role            │
+└─────────────────┘
+        │
+        │
+        ▼
+┌─────────────────┐     ┌─────────────────┐
+│  user_profiles  │     │   user_roles    │
+├─────────────────┤     ├─────────────────┤
+│ id              │     │ id              │
+│ user_id         │◄────│ user_id         │
+│ address         │     │ role            │
+│ phone           │     │ permissions     │
+│ company         │     │ created_at      │
+│ preferences     │     └─────────────────┘
+│ created_at      │
+│ updated_at      │
+└─────────────────┘
+```
+
+### Document Management
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│    templates    │     │    documents    │
+├─────────────────┤     ├─────────────────┤
+│ id              │     │ id              │
+│ name            │     │ name            │
+│ description     │     │ template_id     │◄─┐
+│ user_id         │◄────│ user_id         │  │
+│ file_path       │  ┌──│ file_path       │  │
+│ file_type       │  │  │ created_at      │  │
+│ is_public       │  │  │ updated_at      │  │
+│ category_id     │  │  │ status          │  │
+│ tags            │  │  └─────────────────┘  │
+│ created_at      │  │                       │
+│ updated_at      │  │                       │
+│ placeholder_map │  │                       │
+└─────────────────┘  │                       │
+        │            │                       │
+        │            │                       │
+        ▼            │                       │
+┌─────────────────┐  │                       │
+│   placeholders  │  │                       │
+├─────────────────┤  │                       │
+│ id              │  │                       │
+│ template_id     │◄─┘                       │
+│ name            │                          │
+│ display_name    │                          │
+│ field_type      │                          │
+│ required        │                          │
+│ default_value   │                          │
+│ validation_rules│                          │
+└─────────────────┘                          │
+                                             │
+                                             │
+┌─────────────────┐     ┌─────────────────┐  │
+│   categories    │     │   template_data  │  │
+├─────────────────┤     ├─────────────────┤  │
+│ id              │     │ id              │  │
+│ name            │     │ template_id     │◄─┘
+│ description     │     │ user_id         │
+│ parent_id       │     │ data            │
+│ created_at      │     │ created_at      │
+└─────────────────┘     └─────────────────┘
+```
+
+### Payment and Subscription
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│  subscriptions  │     │  transactions   │
+├─────────────────┤     ├─────────────────┤
+│ id              │     │ id              │
+│ user_id         │◄────│ user_id         │
+│ plan_id         │     │ amount          │
+│ status          │     │ currency        │
+│ start_date      │     │ payment_method  │
+│ end_date        │     │ status          │
+│ payment_method  │     │ reference       │
+│ auto_renew      │     │ metadata        │
+│ created_at      │     │ created_at      │
+└─────────────────┘     └─────────────────┘
+        │
+        │
+        ▼
+┌─────────────────┐     ┌─────────────────┐
+│      plans      │     │  document_usage │
+├─────────────────┤     ├─────────────────┤
+│ id              │     │ id              │
+│ name            │     │ user_id         │
+│ description     │     │ document_id     │
+│ price           │     │ template_id     │
+│ currency        │     │ created_at      │
+│ duration        │     │ size            │
+│ features        │     │ charged         │
+│ is_active       │     └─────────────────┘
+└─────────────────┘
+```
+
+### System Configuration
+
+```
+┌─────────────────┐     ┌─────────────────┐
+│  system_config  │     │  audit_logs     │
+├─────────────────┤     ├─────────────────┤
+│ id              │     │ id              │
+│ key             │     │ user_id         │
+│ value           │     │ action          │
+│ description     │     │ entity_type     │
+│ is_protected    │     │ entity_id       │
+│ created_at      │     │ ip_address      │
+│ updated_at      │     │ metadata        │
+└─────────────────┘     │ created_at      │
+                        └─────────────────┘
+```
+
+## Key Relationships
+
+1. **Users and Profiles**:
+    - One-to-one relationship between users and profiles
+    - Profiles contain extended user information
+    - Roles define permissions and access levels
+
+2. **Templates and Placeholders**:
+    - One-to-many relationship between templates and placeholders
+    - Templates contain metadata about document structure
+    - Placeholders define data entry points and validation rules
+
+3. **Templates and Documents**:
+    - One-to-many relationship between templates and generated documents
+    - Documents are instances of templates with user-specific data
+    - Document status tracks generation progress and availability
+
+4. **Users and Subscriptions**:
+    - One-to-many relationship between users and subscriptions
+    - Subscriptions link to specific plans with feature sets
+    - Transactions record payment history and status
+
+5. **Templates and Categories**:
+    - Many-to-one relationship between templates and categories
+    - Categories provide hierarchical organization
+    - Tags allow flexible cross-categorization
+
+## Schema Notes
+
+1. **JSON Fields**:
+    - `placeholder_map` in templates stores the structured mapping of placeholders
+    - `preferences` in user_profiles stores user interface and notification settings
+    - `metadata` in transactions stores payment gateway specific information
+
+2. **Security Considerations**:
+    - Passwords stored as secure hashes, never in plain text
+    - Sensitive user data encrypted at rest
+    - Audit logs track all system modifications
+
+3. **Performance Optimizations**:
+    - Indexes on frequently queried fields (user_id, template_id)
+    - Foreign key constraints ensure data integrity
+    - Timestamp fields enable efficient change tracking
+
+
+
 ## Database Architecture
 
 ### Schema Overview

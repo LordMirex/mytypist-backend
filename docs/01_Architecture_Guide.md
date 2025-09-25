@@ -32,6 +32,285 @@ MyTypist is a high-performance document automation SaaS platform designed specif
                        │  ACID Compliance│
                        └─────────────────┘
 ```
+# MyTypist Features and Data Flow
+
+## Core Features
+
+### 1. Document Template Management
+
+**Key Capabilities:**
+- Upload and convert documents to templates (DOCX, PDF, PNG)
+- Automatic placeholder detection using AI/ML
+- Template categorization and organization
+- Public/private template access control
+- Template versioning and history
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    User     │────►│  Frontend   │────►│  Template   │────►│  Storage    │
+│  Interface  │     │  Validation │     │  Analysis   │     │  System     │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                           │                    │                    │
+                           ▼                    ▼                    ▼
+                    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+                    │  Security   │     │ Placeholder │     │  Database   │
+                    │  Scanning   │     │ Detection   │     │  Storage    │
+                    └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 2. Document Generation
+
+**Key Capabilities:**
+- Dynamic form generation based on template placeholders
+- Real-time validation of input data
+- Sub-500ms document processing for up to 5 documents
+- Multiple output formats (DOCX, PDF)
+- Batch processing of related documents
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Template   │────►│   Form      │────►│   Data      │────►│  Document   │
+│  Selection  │     │  Generation │     │  Validation │     │  Processing │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│  Download   │◄────│  Format     │◄────│   Output    │◄───────────┘
+│  Options    │     │  Conversion │     │  Generation │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 3. User Authentication & Authorization
+
+**Key Capabilities:**
+- Secure user registration and login
+- JWT token-based authentication
+- Role-based permission system
+- Session management and monitoring
+- Secure password policies
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Login    │────►│ Credential  │────►│    JWT      │────►│   Redis     │
+│    Form     │     │ Validation  │     │  Generation │     │   Session   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                           │                    │                    │
+                           ▼                    ▼                    ▼
+                    ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+                    │  Security   │     │   Role      │     │   User      │
+                    │   Checks    │     │  Assignment │     │  Dashboard  │
+                    └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 4. Payment Processing
+
+**Key Capabilities:**
+- Subscription management (Basic, Professional, Enterprise)
+- Pay-per-document option with wallet system
+- Flutterwave integration for Nigerian payment processing
+- Transaction history and receipt generation
+- Automatic renewals and notifications
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Plan     │────►│   Payment   │────►│ Flutterwave │────►│ Transaction │
+│  Selection  │     │  Initiation │     │  Processing │     │ Verification│
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│   Receipt   │◄────│ Subscription│◄────│  Account    │◄───────────┘
+│  Generation │     │   Update    │     │   Update    │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## Advanced Features
+
+### 1. Batch Document Processing
+
+**Key Capabilities:**
+- Select and process multiple templates simultaneously
+- Smart field consolidation across templates
+- Parallel processing for optimal performance
+- Unified data entry to reduce duplicate information
+- Bulk download and organization
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Multiple   │────►│    Field    │────►│  Unified    │────►│  Parallel   │
+│  Templates  │     │ Consolidation│    │  Data Entry │     │  Processing │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│    Bulk     │◄────│  Document   │◄────│   Status    │◄───────────┘
+│  Download   │     │  Packaging  │     │  Tracking   │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 2. Template Marketplace
+
+**Key Capabilities:**
+- Browse and search public templates
+- User-contributed template repository
+- Rating and review system
+- Template categories and tagging
+- Featured and trending templates
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Marketplace │────►│   Search    │────►│  Template   │────►│  Preview    │
+│   Browse    │     │   Filters   │     │  Selection  │     │   View      │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│  Template   │◄────│   Rating    │◄────│  Template   │◄───────────┘
+│    Use      │     │  & Review   │     │ Information │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 3. E-Signature System
+
+**Key Capabilities:**
+- Draw, type, or upload signatures
+- Secure signature storage and management
+- Multiple signature styles and options
+- Legal compliance with signature standards
+- Batch signature application
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Signature  │────►│  Signature  │────►│  Storage    │────►│  Document   │
+│   Creation  │     │  Processing │     │  Encryption │     │ Application │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│ Final Output│◄────│ Verification│◄────│   Audit     │◄───────────┘
+│  Document   │     │    Check    │     │   Logging   │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 4. Document Analytics
+
+**Key Capabilities:**
+- Track document usage and generation statistics
+- Template popularity and usage patterns
+- User activity and engagement metrics
+- Performance and optimization data
+- Business intelligence reporting
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   User      │────►│   Usage     │────►│   Data      │────►│ Statistical │
+│  Activity   │     │  Tracking   │     │ Aggregation │     │  Analysis   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│  Executive  │◄────│   Visual    │◄────│   Report    │◄───────────┘
+│  Dashboard  │     │  Analytics  │     │ Generation  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## Security Features
+
+### 1. Data Encryption
+
+**Key Capabilities:**
+- End-to-end encryption for sensitive documents
+- Data encryption at rest in storage
+- Secure transmission over HTTPS
+- Key management and rotation
+- Encryption audit logging
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Document    │────►│ Encryption  │────►│  Secure     │────►│  Encrypted  │
+│    Data     │     │  Process    │     │ Transmission │     │   Storage   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│ Authorized  │◄────│ Decryption  │◄────│   Access    │◄───────────┘
+│   Access    │     │  Process    │     │  Control    │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 2. Audit Logging
+
+**Key Capabilities:**
+- Comprehensive activity logging
+- User action tracking and attribution
+- Security event monitoring
+- Compliance reporting
+- Anomaly detection
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    User     │────►│   Action    │────►│   Event     │────►│   Secure    │
+│   Activity  │     │  Recording  │     │  Processing │     │    Logs     │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│ Compliance  │◄────│   Report    │◄────│   Analysis  │◄───────────┘
+│  Reporting  │     │ Generation  │     │    Engine   │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+## Performance Features
+
+### 1. Caching System
+
+**Key Capabilities:**
+- Redis-based caching for API responses
+- Template structure caching for fast generation
+- User session and authentication caching
+- Intelligent cache invalidation
+- Performance monitoring
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Request   │────►│  Cache      │────►│  Cache      │────►│  Response   │
+│   Receipt   │     │  Check      │     │  Retrieval  │     │  Delivery   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+        │                                                            ▲
+        │                                                            │
+        ▼                                                            │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│  Database   │────►│ Processing  │────►│   Cache     │────────────┘
+│   Query     │     │  Request    │     │   Storage   │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 2. Task Queue System
+
+**Key Capabilities:**
+- Background processing for heavy operations
+- Asynchronous email sending
+- Scheduled maintenance tasks
+- Document generation optimization
+- Task prioritization
+
+**Data Flow:**
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    Task     │────►│   Queue     │────►│   Worker    │────►│   Task      │
+│  Creation   │     │  Placement  │     │  Process    │     │  Execution  │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐            │
+│    Status   │◄────│   Result    │◄────│  Resource   │◄───────────┘
+│   Update    │     │  Processing │     │ Management  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+
 
 ## Core Components
 
@@ -86,7 +365,7 @@ Placeholder (placeholders)
 ├── id: Primary key
 ├── template_id: Parent template
 ├── name: Field identifier
-├── type: TEXT | DATE | NUMBER | SIGNATURE
+├── type: TEXT | DATE | NUMBER | SIGNATURE  
 └── validation: Required, format rules
 ```
 
@@ -289,6 +568,170 @@ Encryption at Rest + Transit
 - **Monitoring**: Health checks, performance metrics
 
 ---
+
+# MyTypist Core System Flows
+
+## 1. Document Template Flow
+
+### Template Creation
+```
+User Upload → Format Validation → Content Analysis → Placeholder Detection → Template Storage
+```
+
+#### Details:
+1. **User Upload**
+    - User uploads document template (DOCX, PDF, PNG)
+    - File size and type validation occurs
+    - Security scanning for malicious content
+
+2. **Content Analysis**
+    - Document parsed based on format
+    - Text extraction and structural analysis
+    - Font and style detection
+
+3. **Placeholder Detection**
+    - AI-powered analysis identifies likely placeholder text
+    - System detects pattern-based placeholders (e.g., {name}, [date])
+    - Field types are inferred (text, date, number, signature)
+
+4. **Template Storage**
+    - Template saved to database with metadata
+    - Preview generated for marketplace/selection
+    - Template categorized based on content analysis
+
+## 2. Document Generation Flow
+
+### Document Creation
+```
+Template Selection → Form Generation → Data Collection → Document Processing → Output Delivery
+```
+
+#### Details:
+1. **Template Selection**
+    - User browses or searches template library
+    - Preview shows template with highlighted placeholders
+    - Selection initiates form generation
+
+2. **Form Generation**
+    - Dynamic form created based on template placeholders
+    - Field validation rules applied
+    - User profile data pre-fills known fields
+
+3. **Data Collection**
+    - User completes form with required information
+    - Real-time validation provides immediate feedback
+    - Data saved as draft automatically during entry
+
+4. **Document Processing**
+    - Backend retrieves template and applies user data
+    - Format-specific processing maintains document integrity
+    - Any required calculations or formatting applied
+
+5. **Output Delivery**
+    - Generated document available for preview
+    - Download options in multiple formats
+    - Document stored in user's history
+
+## 3. Batch Processing Flow
+
+### Multi-Document Processing
+```
+Multiple Template Selection → Form Consolidation → Unified Data Entry → Parallel Processing → Package Delivery
+```
+
+#### Details:
+1. **Multiple Template Selection**
+    - User selects multiple related templates
+    - System analyzes template compatibility
+    - Estimates processing time and resources
+
+2. **Form Consolidation**
+    - System identifies common fields across templates
+    - Creates unified form with logical sections
+    - Maintains template-specific fields where needed
+
+3. **Unified Data Entry**
+    - User fills single form for all documents
+    - Data entry reduced through field sharing
+    - Format variations handled automatically
+
+4. **Parallel Processing**
+    - System processes documents concurrently
+    - Resources allocated based on complexity
+    - Progress tracking for large batches
+
+5. **Package Delivery**
+    - Documents available individually or as package
+    - Success/failure reporting for each document
+    - Retry options for failed documents
+
+## 4. Authentication and User Management Flow
+
+### User Access
+```
+Registration/Login → Authentication → Authorization → Session Management → Activity Tracking
+```
+
+#### Details:
+1. **Registration/Login**
+    - User credentials collected and validated
+    - Email verification for new accounts
+    - Password policy enforcement
+
+2. **Authentication**
+    - Credentials validated against secure storage
+    - JWT token generated with appropriate expiry
+    - Failed attempt monitoring and prevention
+
+3. **Authorization**
+    - User role and permissions determined
+    - Access control applied to system features
+    - Subscription status checked for premium features
+
+4. **Session Management**
+    - Active session tracked in Redis
+    - Timeout monitoring and refresh handling
+    - Cross-device session synchronization
+
+5. **Activity Tracking**
+    - User actions logged for security and analytics
+    - Usage metrics collected for billing
+    - Error tracking for support purposes
+
+## 5. Payment and Subscription Flow
+
+### Payment Processing
+```
+Plan Selection → Payment Initiation → Flutterwave Processing → Transaction Verification → Account Update
+```
+
+#### Details:
+1. **Plan Selection**
+    - User chooses subscription tier or pay-per-document
+    - System calculates applicable fees/taxes
+    - Discount codes applied if applicable
+
+2. **Payment Initiation**
+    - Secure handoff to payment gateway
+    - Transaction details recorded in pending state
+    - User directed to Flutterwave payment interface
+
+3. **Payment Processing**
+    - Flutterwave handles payment security
+    - Card processing or alternative payment methods
+    - Initial transaction verification
+
+4. **Transaction Verification**
+    - Webhook receives payment confirmation
+    - System validates transaction against records
+    - Fraud detection measures applied
+
+5. **Account Update**
+    - User subscription status updated
+    - Document credits added to account
+    - Receipt generated and delivered
+    - Access to relevant features unlocked
+
 
 ## Next Steps
 
