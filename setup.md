@@ -20,11 +20,8 @@ echo $DATABASE_URL
 
 ### 2. **Install Dependencies**
 ```bash
-# Install all required packages
-
-pip install -r pyproject.toml
-
-# or requirements.txt
+# Install all required packages from pyproject.toml
+pip install -e .  # or: pip install .
 ```
 
 
