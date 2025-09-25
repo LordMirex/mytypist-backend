@@ -1,0 +1,91 @@
+modules = ["python-3.11"]
+[agent]
+expertMode = true
+integrations = ["python_sendgrid:1.0.0", "python_database:1.0.0"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["cargo", "file", "fontconfig", "freetype", "ghostscript", "glib", "glibcLocales", "gumbo", "harfbuzz", "jbig2dec", "lcms2", "libGL", "libGLU", "libiconv", "libimagequant", "libjpeg", "libjpeg_turbo", "libmaxminddb", "libtiff", "libuv", "libwebp", "libxcrypt", "mupdf", "openjpeg", "openssl", "pango", "pkg-config", "poppler_utils", "redis", "rustc", "swig", "tcl", "tesseract", "tk", "xcbuild", "xsimd", "zlib", "poppler"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MyTypist Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Redis Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Celery Worker"
+
+[[workflows.workflow]]
+name = "MyTypist Backend"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uv run python main.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Redis Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "redis-server --port 6000 --save \"\" --appendonly no --bind 0.0.0.0"
+waitForPort = 6000
+
+[[workflows.workflow]]
+name = "Celery Worker"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uv run celery -A main.celery_app worker --loglevel=info"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 6000
+externalPort = 6000
+
+[[ports]]
+localPort = 6379
+externalPort = 3002
+
+[[ports]]
+localPort = 33713
+externalPort = 3001
+
+[[ports]]
+localPort = 38225
+externalPort = 3003
+
+[[ports]]
+localPort = 39813
+externalPort = 3000
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "--workers=4", "--worker-class=uvicorn.workers.UvicornWorker", "main:app"]
