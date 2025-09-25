@@ -386,8 +386,8 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN pip install --no-cache-dir .
 
 # Production stage
 FROM python:3.11-slim as production
@@ -587,7 +587,7 @@ python3.11 -m venv venv
 source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e .  # or: pip install .
 
 # Create development directories
 mkdir -p storage/{templates,documents,signatures,uploads,quarantine}
@@ -703,7 +703,7 @@ python -m alembic upgrade head
 
 # Install/update dependencies
 echo "📦 Installing dependencies..."
-pip install -r requirements.txt --no-deps
+pip install . --no-deps
 
 # Run tests
 echo "🧪 Running tests..."

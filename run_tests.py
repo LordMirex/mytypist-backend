@@ -53,16 +53,24 @@ def install_dependencies(python_cmd):
     print("Installing dependencies...")
 
     try:
-        # Try pip install
+        # Install using pyproject.toml (editable mode preferred for local dev)
+        print("Installing package and dependencies from pyproject.toml (editable mode)...")
         result = subprocess.run([
-            python_cmd, '-m', 'pip', 'install',
-            'pytest', 'pytest-asyncio', 'httpx', 'fastapi', 'sqlalchemy'
-        ], capture_output=True, text=True, timeout=300)
+            python_cmd, '-m', 'pip', 'install', '-e', '.'
+        ], capture_output=True, text=True, timeout=1200)
+
+        # Fallback to standard install if editable fails (e.g., in restricted envs)
+        if result.returncode != 0:
+            print("Editable install failed, attempting standard install: pip install .")
+            result = subprocess.run([
+                python_cmd, '-m', 'pip', 'install', '.'
+            ], capture_output=True, text=True, timeout=1200)
 
         if result.returncode == 0:
             print("✅ Dependencies installed successfully")
             return True
         else:
+            print(result.stdout)
             print(f"❌ Dependency installation failed: {result.stderr}")
             return False
 
@@ -137,24 +145,22 @@ def main():
     print("🧪 MyTypist Backend Test Runner")
     print("=" * 50)
 
-    # First try basic validation
-    if not run_basic_validation():
-        print("\n❌ Basic validation failed. Please check imports and dependencies.")
-        return 1
-
-    # Try to find Python
+    # Find Python first
     python_cmd = find_python()
-
     if not python_cmd:
         print("\n⚠️  Python not found in PATH")
-        print("Basic validation passed, but cannot run full test suite")
         print("Please ensure Python is installed and available in PATH")
         return 1
 
-    # Try to install dependencies
+    # Install dependencies early to satisfy basic imports
     if not install_dependencies(python_cmd):
         print("\n⚠️  Could not install test dependencies")
-        print("Please install manually: pip install pytest pytest-asyncio httpx")
+        print("Please install manually: pip install -e .  (or: pip install .)")
+        # Continue to basic validation anyway to show clearer errors
+
+    # Try basic validation now that deps are (mostly) installed
+    if not run_basic_validation():
+        print("\n❌ Basic validation failed. Please check imports and dependencies.")
         return 1
 
     # Run tests

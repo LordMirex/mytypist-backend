@@ -53,8 +53,8 @@ cd mytypist-backend
 python3.11 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (pyproject.toml)
+pip install -e .  # or: pip install .
 
 # Or use uv for faster installation
 pip install uv
