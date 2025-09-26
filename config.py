@@ -52,28 +52,38 @@ class Settings(BaseSettings):
     @classmethod
     def validate_jwt_secret_key(cls, value: str) -> str:
         """Validate JWT secret key for security"""
-        # JWT_SECRET_KEY is mandatory for production security
+
+        # Allow empty key for development
         if not value or value.strip() == "":
-            raise ValueError(
-                "JWT_SECRET_KEY environment variable is required for secure authentication. "
-                "Please set a cryptographically secure random key (32+ characters)."
-            )
+            if os.getenv("DEBUG", "false").lower() == "true":
+                print("⚠️ WARNING: Using default JWT key for development")
+                return "dev-jwt-secret-key-32-characters-minimum"
+            else:
+                raise ValueError(
+                    "JWT_SECRET_KEY environment variable is required for production. "
+                    "Please set a cryptographically secure random key (32+ characters)."
+                )
 
-        # Validate key strength
+        # Validate key strength for production
         if len(value) < 32:
-            raise ValueError(
-                f"JWT_SECRET_KEY must be at least 32 characters long for security. "
-                f"Current length: {len(value)}")
+            if os.getenv("DEBUG", "false").lower() == "true":
+                print("⚠️ WARNING: JWT key shorter than recommended for development")
+                return value
+            else:
+                raise ValueError(
+                    f"JWT_SECRET_KEY must be at least 32 characters long for production. "
+                    f"Current length: {len(value)}")
 
-        # Reject weak/default keys
-        weak_keys = [
-            "your-super-secret-key-change-this-for-production", "secret",
-            "key", "password", "jwt-secret", "change-me"
-        ]
-        if value.lower() in [key.lower() for key in weak_keys]:
-            raise ValueError(
-                "JWT_SECRET_KEY cannot be a common/weak value. "
-                "Please use a cryptographically secure random key.")
+        # Reject weak/default keys in production
+        if os.getenv("DEBUG", "false").lower() != "true":
+            weak_keys = [
+                "your-super-secret-key-change-this-for-production", "secret",
+                "key", "password", "jwt-secret", "change-me", "dev-jwt-secret-key-32-characters-minimum"
+            ]
+            if value.lower() in [key.lower() for key in weak_keys]:
+                raise ValueError(
+                    "JWT_SECRET_KEY cannot be a common/weak value in production. "
+                    "Please use a cryptographically secure random key.")
 
         return value
 

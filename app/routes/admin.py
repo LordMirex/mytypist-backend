@@ -3,7 +3,7 @@ Admin management routes
 """
 
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_
@@ -24,11 +24,39 @@ from app.services.audit_service import AuditService
 from app.utils.security import get_current_active_user
 from app.services.admin_dashboard_service import AdminDashboardService
 from app.services.auth_service import AuthService
+from app.services.campaign_service import CampaignService
+from app.services.campaign_analytics_service import CampaignAnalyticsService
+from app.services.token_management_service import TokenManagementService
+from app.services.referral_service import ReferralService
+from app.models.referral import ReferralProgram
+from pydantic import BaseModel
 
 # Provide compatibility with routes expecting this dependency
 get_current_admin_user = AuthService.get_current_admin_user
 
 router = APIRouter()
+
+# Admin Rewards Models
+class TokenRewardUpdate(BaseModel):
+    """Request to update token reward settings"""
+    welcome_bonus_amount: Optional[int] = None
+    referral_bonus_amount: Optional[int] = None
+    document_token_cost: Optional[int] = None
+    template_token_cost: Optional[int] = None
+    api_token_cost: Optional[int] = None
+
+class TokenBulkGift(BaseModel):
+    """Request to gift tokens to multiple users"""
+    user_ids: List[int]
+    token_type: str
+    amount: int
+    description: str
+    expires_in_days: Optional[int] = None
+
+class CampaignMetricUpdate(BaseModel):
+    """Request to manually update campaign metrics"""
+    campaign_id: int
+    metrics: Dict[str, Any]
 
 
 def require_admin(current_user: User = Depends(get_current_active_user)):
@@ -896,4 +924,167 @@ async def bulk_update_template_pricing(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update template pricing: {str(e)}"
+        )
+
+
+# Admin Rewards Endpoints (merged from admin_rewards.py)
+@router.put("/rewards/token-settings")
+async def update_token_settings(
+    request: TokenRewardUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Update token reward settings"""
+    try:
+        # Update token settings
+        token_service = TokenManagementService()
+        result = await token_service.update_reward_settings(
+            db=db,
+            welcome_bonus_amount=request.welcome_bonus_amount,
+            referral_bonus_amount=request.referral_bonus_amount,
+            document_token_cost=request.document_token_cost,
+            template_token_cost=request.template_token_cost,
+            api_token_cost=request.api_token_cost
+        )
+
+        return {
+            "message": "Token settings updated successfully",
+            "settings": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update token settings: {str(e)}"
+        )
+
+@router.post("/rewards/bulk-gift-tokens")
+async def bulk_gift_tokens(
+    request: TokenBulkGift,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Gift tokens to multiple users"""
+    try:
+        token_service = TokenManagementService()
+        result = await token_service.bulk_gift_tokens(
+            db=db,
+            user_ids=request.user_ids,
+            token_type=request.token_type,
+            amount=request.amount,
+            description=request.description,
+            expires_in_days=request.expires_in_days
+        )
+
+        return {
+            "message": f"Successfully gifted tokens to {len(request.user_ids)} users",
+            "gifted_count": result.get("gifted_count", 0),
+            "failed_count": result.get("failed_count", 0)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to gift tokens: {str(e)}"
+        )
+
+@router.get("/rewards/campaigns")
+async def get_campaigns(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Get all campaigns"""
+    try:
+        campaign_service = CampaignService()
+        campaigns = await campaign_service.get_all_campaigns(db)
+
+        return {
+            "campaigns": campaigns,
+            "total": len(campaigns)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get campaigns: {str(e)}"
+        )
+
+@router.get("/rewards/campaigns/{campaign_id}/analytics")
+async def get_campaign_analytics(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Get campaign analytics"""
+    try:
+        analytics_service = CampaignAnalyticsService()
+        analytics = await analytics_service.get_campaign_analytics(db, campaign_id)
+
+        return analytics
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get campaign analytics: {str(e)}"
+        )
+
+@router.put("/rewards/campaigns/{campaign_id}/metrics")
+async def update_campaign_metrics(
+    campaign_id: int,
+    request: CampaignMetricUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Manually update campaign metrics"""
+    try:
+        analytics_service = CampaignAnalyticsService()
+        result = await analytics_service.update_campaign_metrics(
+            db=db,
+            campaign_id=campaign_id,
+            metrics=request.metrics
+        )
+
+        return {
+            "message": "Campaign metrics updated successfully",
+            "campaign_id": campaign_id,
+            "updated_metrics": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update campaign metrics: {str(e)}"
+        )
+
+@router.get("/rewards/referral-program")
+async def get_referral_program(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Get referral program settings"""
+    try:
+        referral_service = ReferralService()
+        program = await referral_service.get_referral_program(db)
+
+        return program
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get referral program: {str(e)}"
+        )
+
+@router.put("/rewards/referral-program")
+async def update_referral_program(
+    program_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin_user)
+):
+    """Update referral program settings"""
+    try:
+        referral_service = ReferralService()
+        result = await referral_service.update_referral_program(db, program_data)
+
+        return {
+            "message": "Referral program updated successfully",
+            "program": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update referral program: {str(e)}"
         )

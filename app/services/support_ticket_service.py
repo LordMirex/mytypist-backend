@@ -157,8 +157,11 @@ class SupportTicketService:
             if user_id and ticket.user_id and ticket.user_id != user_id:
                 return {"success": False, "error": "Access denied"}
 
-            # Get replies
-            replies = db.query(TicketReply).filter(
+            # Get replies with user info using join to avoid N+1 queries
+            from app.models.user import User
+            replies = db.query(TicketReply, User).outerjoin(
+                User, TicketReply.user_id == User.id
+            ).filter(
                 TicketReply.ticket_id == ticket.id,
                 TicketReply.is_internal == False  # Don't show internal notes to users
             ).order_by(TicketReply.created_at).all()
@@ -166,7 +169,6 @@ class SupportTicketService:
             # Get assigned admin info
             assigned_admin = None
             if ticket.assigned_to:
-                from app.models.user import User
                 admin = db.query(User).filter(User.id == ticket.assigned_to).first()
                 if admin:
                     assigned_admin = {
@@ -176,12 +178,9 @@ class SupportTicketService:
 
             # Format replies
             reply_data = []
-            for reply in replies:
+            for reply, user in replies:
                 reply_user = None
-                if reply.user_id:
-                    from app.models.user import User
-                    user = db.query(User).filter(User.id == reply.user_id).first()
-                    if user:
+                if user:
                         reply_user = {
                             "name": f"{user.first_name} {user.last_name}",
                             "role": user.role

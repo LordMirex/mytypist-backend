@@ -46,14 +46,16 @@ redis_client = redis.Redis(
     retry_on_timeout=True
 )
 
-# Test Redis connection on startup - fail fast if Redis is not available
+# Test Redis connection on startup - make it optional for development
+REDIS_AVAILABLE = False
 try:
     redis_client.ping()
     print("✅ Redis connection established")
+    REDIS_AVAILABLE = True
 except Exception as e:
-    print(f"❌ Redis connection failed: {e}")
-    print("💡 Redis is required for caching, sessions, and background tasks")
-    raise RuntimeError(f"Redis connection failed: {e}") from e
+    print(f"⚠️ Redis unavailable: {e}")
+    print("🔄 Running in degraded mode without Redis")
+    redis_client = None
 
 # Initialize Celery
 celery_app = Celery(
@@ -281,9 +283,7 @@ app.include_router(referrals.router, prefix="/api/referrals", tags=["Referrals"]
 # Include anonymous routes
 app.include_router(anonymous.router, prefix="/api/anonymous", tags=["Anonymous"])
 
-# Include admin rewards system
-from app.routes import admin_rewards
-app.include_router(admin_rewards.router)
+# Admin rewards system now included in main admin router
 
 
 # Core authentication and document processing features loaded (routers registered)

@@ -1,10 +1,11 @@
 """
 Analytics and tracking routes
+Consolidated analytics system including real-time and social analytics
 """
 
 from datetime import datetime, timedelta
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_
 
@@ -16,8 +17,11 @@ from app.models.analytics.visit import DocumentVisit, PageVisit
 from app.services.analytics.visit_tracking import VisitTrackingService
 from app.services.audit_service import AuditService
 from app.services.performance_service import PerformanceService
+from app.services.realtime_analytics_service import RealtimeAnalyticsService
+from app.services.social_analytics import SocialAnalytics
 from app.schemas.analytics import TimePeriod
 from app.utils.security import get_current_active_user
+from app.dependencies import rate_limit, validate_analytics_request
 
 router = APIRouter()
 
@@ -30,20 +34,20 @@ async def track_document_visit(
     db: Session = Depends(get_db)
 ):
     """Track document visit (public endpoint for shared documents)"""
-    
+
     # Verify document exists
     document = db.query(Document).filter(Document.id == document_id).first()
-    
+
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found"
         )
-    
+
     # Create visit record using shared tracking service
     visit_tracking = VisitTrackingService()
     visit = visit_tracking.track_document_visit(db, document_id, visit_type, request)
-    
+
     # Return visit metrics
     return {
         "success": True,
@@ -86,13 +90,13 @@ async def get_batch_analytics(
         Document.batch_id == batch_id,
         Document.user_id == current_user.id
     ).first()
-    
+
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Batch not found"
         )
-    
+
     analytics = PerformanceService.get_batch_analytics(db, batch_id)
     return analytics
 
@@ -105,26 +109,26 @@ async def get_performance_dashboard(
     """Get performance dashboard data"""
     # Get last 30 days metrics
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    
+
     time_saved = PerformanceService.get_user_time_savings(
         db,
         current_user.id,
         thirty_days_ago
     )
-    
+
     # Get recent batches
     recent_batches = db.query(Document.batch_id).filter(
         Document.user_id == current_user.id,
         Document.batch_id.isnot(None),
         Document.created_at >= thirty_days_ago
     ).distinct().limit(5).all()
-    
+
     batch_analytics = [
         PerformanceService.get_batch_analytics(db, batch_id)
         for (batch_id,) in recent_batches
         if batch_id
     ]
-    
+
     return {
         "time_saved": time_saved,
         "recent_batches": batch_analytics,
@@ -145,10 +149,10 @@ async def get_visit_analytics(
     db: Session = Depends(get_db)
 ):
     """Get visit analytics for user's documents"""
-    
+
     # Build query for user's documents
     query = db.query(Visit).join(Document).filter(Document.user_id == current_user.id)
-    
+
     # Filter by document if specified
     if document_id:
         # Verify user owns the document
@@ -156,25 +160,25 @@ async def get_visit_analytics(
             Document.id == document_id,
             Document.user_id == current_user.id
         ).first()
-        
+
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Document not found"
             )
-        
+
         query = query.filter(Visit.document_id == document_id)
-    
+
     # Filter by date range
     start_date = datetime.utcnow() - timedelta(days=days)
     query = query.filter(Visit.visited_at >= start_date)
-    
+
     visits = query.order_by(desc(Visit.visited_at)).all()
-    
+
     # Process analytics data
     visit_tracking = VisitTrackingService()
     analytics_data = visit_tracking.process_document_analytics(visits)
-    
+
     return analytics_data
 
 
@@ -184,10 +188,10 @@ async def get_analytics_dashboard_data(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive analytics dashboard data"""
-    
+
     visit_tracking = VisitTrackingService()
     dashboard_data = visit_tracking.get_dashboard_analytics(db, current_user.id)
-    
+
     return dashboard_data
 
 
@@ -199,9 +203,9 @@ async def get_document_performance(
     db: Session = Depends(get_db)
 ):
     """Get top performing documents by views/downloads"""
-    
+
     start_date = datetime.utcnow() - timedelta(days=days)
-    
+
     # Query for document performance
     document_performance = db.query(
         Document.id,
@@ -222,7 +226,7 @@ async def get_document_performance(
     ).order_by(
         desc('recent_visits')
     ).limit(limit).all()
-    
+
     performance_data = []
     for perf in document_performance:
         performance_data.append({
@@ -232,7 +236,7 @@ async def get_document_performance(
             "total_downloads": perf[3],
             "recent_visits": perf[4]
         })
-    
+
     return {
         "period_days": days,
         "top_documents": performance_data
@@ -247,9 +251,9 @@ async def get_traffic_sources(
     db: Session = Depends(get_db)
 ):
     """Get traffic sources analytics"""
-    
+
     start_date = datetime.utcnow() - timedelta(days=days)
-    
+
     # Build query
     query = db.query(
         Visit.referrer,
@@ -260,14 +264,14 @@ async def get_traffic_sources(
         Document.user_id == current_user.id,
         Visit.visited_at >= start_date
     )
-    
+
     if document_id:
         query = query.filter(Visit.document_id == document_id)
-    
+
     traffic_sources = query.group_by(
         Visit.referrer, Visit.utm_source, Visit.utm_medium
     ).order_by(desc('visits')).all()
-    
+
     sources_data = []
     for source in traffic_sources:
         source_name = "Direct"
@@ -275,13 +279,13 @@ async def get_traffic_sources(
             source_name = source.utm_source
         elif source.referrer:
             source_name = source.referrer
-        
+
         sources_data.append({
             "source": source_name,
             "medium": source.utm_medium,
             "visits": source.visits
         })
-    
+
     return {
         "period_days": days,
         "traffic_sources": sources_data
@@ -296,9 +300,9 @@ async def get_geographic_analytics(
     db: Session = Depends(get_db)
 ):
     """Get geographic distribution of visits"""
-    
+
     start_date = datetime.utcnow() - timedelta(days=days)
-    
+
     query = db.query(
         Visit.visitor_country,
         Visit.visitor_city,
@@ -308,28 +312,28 @@ async def get_geographic_analytics(
         Visit.visited_at >= start_date,
         Visit.visitor_country.isnot(None)
     )
-    
+
     if document_id:
         query = query.filter(Visit.document_id == document_id)
-    
+
     geographic_data = query.group_by(
         Visit.visitor_country, Visit.visitor_city
     ).order_by(desc('visits')).all()
-    
+
     countries = {}
     cities = []
-    
+
     for geo in geographic_data:
         country = geo.visitor_country
         city = geo.visitor_city
         visits = geo.visits
-        
+
         # Aggregate by country
         if country in countries:
             countries[country] += visits
         else:
             countries[country] = visits
-        
+
         # Top cities
         if city:
             cities.append({
@@ -337,7 +341,7 @@ async def get_geographic_analytics(
                 "country": country,
                 "visits": visits
             })
-    
+
     return {
         "period_days": days,
         "countries": [{"country": k, "visits": v} for k, v in countries.items()],
@@ -353,9 +357,9 @@ async def get_device_analytics(
     db: Session = Depends(get_db)
 ):
     """Get device and browser analytics"""
-    
+
     start_date = datetime.utcnow() - timedelta(days=days)
-    
+
     query = db.query(
         Visit.device_type,
         Visit.browser,
@@ -365,42 +369,42 @@ async def get_device_analytics(
         Document.user_id == current_user.id,
         Visit.visited_at >= start_date
     )
-    
+
     if document_id:
         query = query.filter(Visit.document_id == document_id)
-    
+
     device_data = query.group_by(
         Visit.device_type, Visit.browser, Visit.os
     ).order_by(desc('visits')).all()
-    
+
     devices = {}
     browsers = {}
     operating_systems = {}
-    
+
     for device in device_data:
         device_type = device.device_type or "Unknown"
         browser = device.browser or "Unknown"
         os = device.os or "Unknown"
         visits = device.visits
-        
+
         # Aggregate by device type
         if device_type in devices:
             devices[device_type] += visits
         else:
             devices[device_type] = visits
-        
+
         # Aggregate by browser
         if browser in browsers:
             browsers[browser] += visits
         else:
             browsers[browser] = visits
-        
+
         # Aggregate by OS
         if os in operating_systems:
             operating_systems[os] += visits
         else:
             operating_systems[os] = visits
-    
+
     return {
         "period_days": days,
         "devices": [{"type": k, "visits": v} for k, v in devices.items()],
@@ -415,15 +419,15 @@ async def get_realtime_analytics(
     db: Session = Depends(get_db)
 ):
     """Get real-time analytics (last 24 hours)"""
-    
+
     last_24h = datetime.utcnow() - timedelta(hours=24)
-    
+
     # Recent visits
     recent_visits = db.query(Visit).join(Document).filter(
         Document.user_id == current_user.id,
         Visit.visited_at >= last_24h
     ).order_by(desc(Visit.visited_at)).limit(50).all()
-    
+
     # Active documents (documents with visits in last hour)
     last_hour = datetime.utcnow() - timedelta(hours=1)
     active_documents = db.query(
@@ -434,7 +438,7 @@ async def get_realtime_analytics(
         Document.user_id == current_user.id,
         Visit.visited_at >= last_hour
     ).group_by(Document.id, Document.title).all()
-    
+
     return {
         "total_visits_24h": len(recent_visits),
         "active_documents": [
@@ -467,19 +471,19 @@ async def export_analytics(
     db: Session = Depends(get_db)
 ):
     """Export analytics data"""
-    
+
     if format not in ["csv", "json"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unsupported export format"
         )
-    
+
     # Get analytics data
     visit_tracking = VisitTrackingService()
     analytics_data = visit_tracking.export_analytics_data(
         db, current_user.id, document_id, days, format
     )
-    
+
     # Log data export
     AuditService.log_analytics_event(
         "ANALYTICS_EXPORTED",
@@ -492,7 +496,7 @@ async def export_analytics(
             "record_count": len(analytics_data.get("visits", []))
         }
     )
-    
+
     return analytics_data
 
 
@@ -504,21 +508,21 @@ async def delete_visit(
     db: Session = Depends(get_db)
 ):
     """Delete visit record (GDPR compliance)"""
-    
+
     visit = db.query(Visit).join(Document).filter(
         Visit.id == visit_id,
         Document.user_id == current_user.id
     ).first()
-    
+
     if not visit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Visit record not found"
         )
-    
+
     db.delete(visit)
     db.commit()
-    
+
     # Log visit deletion
     AuditService.log_analytics_event(
         "VISIT_DELETED",
@@ -529,7 +533,7 @@ async def delete_visit(
             "document_id": visit.document_id
         }
     )
-    
+
     return {"message": "Visit record deleted successfully"}
 
 
@@ -541,12 +545,12 @@ async def anonymize_analytics_data(
     db: Session = Depends(get_db)
 ):
     """Anonymize analytics data (GDPR compliance)"""
-    
+
     visit_tracking = VisitTrackingService()
     anonymized_count = visit_tracking.anonymize_user_analytics(
         db, current_user.id, document_id
     )
-    
+
     # Log anonymization
     AuditService.log_analytics_event(
         "ANALYTICS_ANONYMIZED",
@@ -557,8 +561,107 @@ async def anonymize_analytics_data(
             "anonymized_count": anonymized_count
         }
     )
-    
+
     return {
         "message": f"Anonymized {anonymized_count} analytics records",
         "anonymized_count": anonymized_count
     }
+
+
+# Real-time Analytics Endpoints (merged from analytics_realtime.py)
+@router.post("/realtime/track",
+    response_model=Dict[str, Any],
+    dependencies=[
+        Depends(rate_limit),
+        Depends(validate_analytics_request)
+    ]
+)
+async def track_realtime_interaction(
+    event_data: Dict[str, Any],
+    session_id: str,
+    db: Session = Depends(get_db),
+    timestamp: Optional[datetime] = None
+) -> Dict[str, Any]:
+    """
+    Track real-time user interaction
+    """
+    try:
+        result = await RealtimeAnalyticsService.track_user_interaction(
+            db=db,
+            session_id=session_id,
+            event_type=event_data.get("event_type"),
+            event_data=event_data,
+            timestamp=timestamp
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.get("/realtime/metrics",
+    response_model=Dict[str, Any],
+    dependencies=[Depends(rate_limit)]
+)
+async def get_realtime_metrics(
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get real-time analytics metrics
+    """
+    try:
+        return await RealtimeAnalyticsService.get_realtime_metrics(db)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# Social Analytics Endpoints (merged from social_analytics.py)
+@router.get("/social/engagement/{document_id}")
+async def get_document_engagement(
+    document_id: int,
+    days: Optional[int] = Query(None, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """
+    Get engagement metrics for a specific document
+    """
+    analytics = SocialAnalytics()
+    return analytics.get_document_engagement(db, document_id, days)
+
+@router.get("/social/overall")
+async def get_overall_engagement(
+    days: Optional[int] = Query(None, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """
+    Get overall social engagement metrics
+    """
+    analytics = SocialAnalytics()
+    return analytics.get_overall_engagement(db, days)
+
+@router.get("/social/top-documents")
+async def get_top_documents(
+    limit: int = Query(10, ge=1, le=100),
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """
+    Get top performing documents by social engagement
+    """
+    analytics = SocialAnalytics()
+    return analytics.get_top_performing_documents(db, limit, days)
+
+@router.get("/social/traffic-sources")
+async def get_traffic_sources(
+    days: Optional[int] = Query(None, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """
+    Get traffic sources breakdown
+    """
+    analytics = SocialAnalytics()
+    return analytics.get_traffic_sources(db, days)

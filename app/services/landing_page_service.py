@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, desc, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, desc, func, JSON
 from fastapi import Request
 
 from app.models.analytics.visit import LandingVisit
@@ -75,6 +75,37 @@ class LandingPageTemplate(Base):
     max_daily_uses = Column(Integer, default=1000)  # Prevent abuse
     current_daily_uses = Column(Integer, default=0)
     rate_limit_reset_at = Column(DateTime, nullable=True)
+
+
+class LandingPageVisit(Base):
+    """Landing page visit tracking model"""
+    __tablename__ = "landing_page_visits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(100), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+
+    # Visit tracking
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    referrer = Column(String(500), nullable=True)
+
+    # Landing page data
+    viewed_templates = Column(Text, nullable=True)  # JSON array of template IDs
+    templates_viewed_count = Column(Integer, default=0)
+    conversion_events = Column(Text, nullable=True)  # JSON array of conversion events
+
+    # Timestamps
+    first_visit_at = Column(DateTime, default=func.now(), nullable=False)
+    last_interaction_at = Column(DateTime, default=func.now(), nullable=False)
+    converted_at = Column(DateTime, nullable=True)
+
+    # Metadata
+    visit_metadata = Column(JSON, nullable=True)  # Additional visit data
+    is_converted = Column(Boolean, default=False, index=True)
+
+    def __repr__(self):
+        return f"<LandingPageVisit(id={self.id}, session={self.session_id}, converted={self.is_converted})>"
 
 
 class LandingPageService:
@@ -303,9 +334,9 @@ class LandingPageService:
                 visit.metadata = visit.metadata or {}
                 visit.metadata["template_interactions"] = current_interactions
                 visit.templates_viewed_count = (visit.templates_viewed_count or 0) + 1
-                    visit.viewed_templates = json.dumps(viewed_templates)
-                    visit.templates_viewed_count = len(viewed_templates)
-                    db.commit()
+                visit.viewed_templates = json.dumps(viewed_templates)
+                visit.templates_viewed_count = len(viewed_templates)
+                db.commit()
 
             # Update landing template stats
             landing_template = db.query(LandingPageTemplate).filter(

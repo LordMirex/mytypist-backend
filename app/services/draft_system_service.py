@@ -233,13 +233,14 @@ class DraftSystemService:
                 (DocumentDraft.expires_at > datetime.utcnow())
             )
 
-            drafts = query.order_by(desc(DocumentDraft.last_modified)).limit(limit).all()
+            # Use join to avoid N+1 query for template info
+            from app.models.template import Template
+            drafts_with_templates = db.query(DocumentDraft, Template).outerjoin(
+                Template, DocumentDraft.template_id == Template.id
+            ).filter(query.whereclause).order_by(desc(DocumentDraft.last_modified)).limit(limit).all()
 
             draft_data = []
-            for draft in drafts:
-                # Get template info
-                from app.models.template import Template
-                template = db.query(Template).filter(Template.id == draft.template_id).first()
+            for draft, template in drafts_with_templates:
 
                 # Parse auto-save data
                 auto_save_info = {}
@@ -577,7 +578,7 @@ class DraftSystemService:
             template_placeholders = db.query(Placeholder).filter(
                 Placeholder.template_id == template_id
             ).count()
-            
+
             total_fields = max(len(placeholder_data), template_placeholders, 5)
             filled_fields = len([v for v in placeholder_data.values() if v and str(v).strip()])
 
@@ -643,7 +644,7 @@ class DraftSystemService:
             db.refresh(document)
 
             # Document created from draft
-            
+
 
             return {"success": True, "document_id": document.id}
 
