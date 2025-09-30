@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, and_
 
-from app.models.page_visit import PageVisit
+from app.models.analytics.visit import PageVisit
 from app.models.user import User
 
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.services.admin_dashboard_service import AdminDashboardService
 from app.models.user import User
 from app.models.payment import Payment, Subscription
-from app.models.page_visit import PageVisit
+from app.models.analytics.visit import PageVisit
 from app.models.template import Template
 from app.models.document import Document
 

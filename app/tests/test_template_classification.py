@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models.template import Template
-from app.models.template_management import TemplateCategory
+from app.models.template import TemplateCategory
 from app.services.admin_service import AdminService
 from app.services.template_service import TemplateSimilarityService
 

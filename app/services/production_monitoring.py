@@ -4,9 +4,15 @@ Production monitoring and alerting service
 
 import time
 import asyncio
-import psutil
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    print("⚠️ WARNING: psutil not available - system monitoring disabled")
 
 from app.services.cache_service import cache_service
 from app.services.audit_service import AuditService
@@ -29,6 +35,24 @@ class ProductionMonitor:
     async def collect_system_metrics(self) -> Dict[str, Any]:
         """Collect comprehensive system metrics"""
         try:
+            if not PSUTIL_AVAILABLE:
+                return {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "system": {
+                        "cpu_percent": 0,
+                        "cpu_count": 1,
+                        "memory_percent": 0,
+                        "memory_available_gb": 0,
+                        "disk_percent": 0,
+                        "disk_free_gb": 0
+                    },
+                    "process": {
+                        "memory_mb": 0,
+                        "cpu_percent": 0
+                    },
+                    "status": "monitoring_disabled"
+                }
+            
             # CPU metrics
             cpu_percent = psutil.cpu_percent(interval=1)
             cpu_count = psutil.cpu_count()

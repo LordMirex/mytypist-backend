@@ -15,7 +15,8 @@ from app.models.user import User
 from app.services.landing_page_service import LandingPageService
 from app.services.audit_service import AuditService
 from app.services.realtime_analytics_service import RealtimeAnalyticsService
-from app.utils.security import get_current_active_user, get_current_user_optional
+from app.utils.security import get_current_active_user
+from app.core.auth import get_optional_user
 from app.schemas.analytics import EventType, EventData, PageViewData, TemplateInteractionData
 
 logger = logging.getLogger(__name__)
@@ -101,12 +102,11 @@ async def track_landing_visit(
             db=db,
             session_id=session_info["session_id"],
             request=request,
-            utm_params=utm_params if utm_params else None
+            utm_params=utm_params if utm_params else None,
             device_fingerprint=session_info["device_fingerprint"],
             ip_address=session_info["ip_address"],
             user_agent=session_info["user_agent"],
-            referrer=track_request.referrer,
-            utm_params=utm_params
+            referrer=track_request.referrer
         )
 
         # Track in real-time analytics

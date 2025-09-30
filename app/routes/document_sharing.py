@@ -13,8 +13,16 @@ from datetime import datetime
 from database import get_db
 from app.models.document import Document
 from app.models.visit import Visit
+from app.models.user import User
+from app.utils.security import get_current_active_user
 
 router = APIRouter(prefix="/api/document-sharing", tags=["document-sharing"])
+
+
+class DocumentShareAccessRequest(BaseModel):
+    """Request model for accessing shared documents"""
+    password: Optional[str] = None
+    email: Optional[str] = None
 
 
 @router.get("/document/{document_id}", response_model=Dict[str, Any])

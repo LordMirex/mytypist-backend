@@ -16,26 +16,22 @@ class Settings(BaseSettings):
     APP_NAME: str = "MyTypist"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
-    SECRET_KEY: str = os.getenv(
-        "SECRET_KEY",
-        "3c8d10b78c430e7f7b3b3a39e9432d56a3e2a2c7a38d10c8c8b417f4b8f5a2b3")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
 
     # PostgreSQL settings
-    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "mytypist")
-    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "mytypist123")
-    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "mytypistdb")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB")
 
     # Database
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://mytypist:mytypist123@localhost:5433/mytypistdb")
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
 
     # Redis (optional for caching and rate limiting)
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6000"))
-    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "1234")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
     REDIS_URL: str = os.getenv("REDIS_URL",
-                               f"redis://{REDIS_HOST}:{REDIS_PORT}")
+                               f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0" if REDIS_PASSWORD else f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
     REDIS_ENABLED: bool = os.getenv(
         "REDIS_ENABLED",
         "true").lower() == "true"  # Enabled for production use
@@ -92,12 +88,8 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # Security - Configure for production
-    ALLOWED_HOSTS: List[str] = [
-        "*"
-    ]  # Allow all hosts for Replit proxy (OK for dev)
-    ALLOWED_ORIGINS: List[str] = [
-        "*"
-    ]  # Allow all origins for development in Replit (OK for dev)
+    ALLOWED_HOSTS: List[str] = os.getenv("ALLOWED_HOSTS", "").split(",")
+    ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS", "").split(",")
 
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int = 100
@@ -199,3 +191,4 @@ settings = Settings()
 os.makedirs(settings.STORAGE_PATH, exist_ok=True)
 os.makedirs(settings.TEMPLATES_PATH, exist_ok=True)
 os.makedirs(settings.DOCUMENTS_PATH, exist_ok=True)
+os.makedirs(settings.SIGNATURES_PATH, exist_ok=True)

@@ -14,7 +14,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, desc
 from database import Base
 from docx import Document
-import docx2txt
+
+try:
+    import docx2txt
+    DOCX2TXT_AVAILABLE = True
+except ImportError:
+    DOCX2TXT_AVAILABLE = False
+    print("⚠️ WARNING: docx2txt not available - using fallback text extraction")
 
 logger = logging.getLogger(__name__)
 
@@ -323,7 +329,7 @@ class UserTemplateUploadService:
             document_text = '\n'.join(text_parts)
 
             # Fallback to docx2txt if needed
-            if not document_text.strip():
+            if not document_text.strip() and DOCX2TXT_AVAILABLE:
                 document_text = docx2txt.process(file_path)
 
             return document_text
@@ -331,10 +337,12 @@ class UserTemplateUploadService:
         except Exception as e:
             logger.error(f"Failed to extract text from {file_path}: {e}")
             # Fallback method
-            try:
-                return docx2txt.process(file_path)
-            except:
-                return ""
+            if DOCX2TXT_AVAILABLE:
+                try:
+                    return docx2txt.process(file_path)
+                except:
+                    return ""
+            return ""
 
     @staticmethod
     def _find_placeholders_multi_method(document_text: str, file_path: str) -> List[Dict[str, Any]]:

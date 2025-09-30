@@ -1,0 +1,70 @@
+# MyTypist Backend Requirements
+# Generated from pyproject.toml for compatibility
+
+# Core FastAPI Framework
+fastapi>=0.116.1
+uvicorn>=0.35.0
+python-multipart>=0.0.20
+python-dotenv>=1.0.0
+
+# Database
+sqlalchemy>=2.0.43
+alembic>=1.16.5
+psycopg2-binary>=2.9.10
+redis>=6.4.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.5.0
+passlib[bcrypt]>=1.7.4
+email-validator>=2.3.0
+cryptography>=45.0.7
+pyotp>=2.9.0
+
+# Document Processing
+python-docx>=1.1.2
+docx2pdf>=0.1.8
+PyPDF2>=3.0.1
+reportlab>=4.0.0
+pdf2image>=1.17.0
+pillow>=11.3.0
+python-magic>=0.4.27
+jinja2>=3.1.6
+
+# Image Processing
+opencv-python>=4.11.0.86
+pytesseract>=0.3.13
+
+# Async Support & Performance
+aiofiles>=24.1.0
+httpx>=0.28.1
+celery>=5.5.3
+psutil>=7.0.0
+
+# Data Processing & Analysis
+numpy>=2.3.2
+scipy>=1.16.1
+python-dateutil>=2.9.0.post0
+
+# Configuration & Settings
+pydantic>=2.11.7
+pydantic-settings>=2.10.1
+
+# API & Integration
+requests>=2.31.0
+geoip2>=5.1.0
+sendgrid>=6.12.4
+qrcode[pil]>=7.4.2
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.25.0
+pytest-mock>=3.14.0
+
+# Additional Dependencies
+weasyprint>=60.0.0
+PyMuPDF>=1.23.0
+pyjwt>=2.10.1
+maxminddb>=2.8.2
+scikit-learn>=1.7.2
+prometheus-client>=0.22.1
+uvloop>=0.21.0
